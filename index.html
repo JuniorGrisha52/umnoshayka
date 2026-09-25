@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Умножайка PRO — Интерактивная таблица умножения</title>
+  <style>
+    :root {
+      --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #fae8ff 50%, #e0f2fe 100%);
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --card-border: rgba(226, 232, 240, 0.8);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --primary: #6366f1;
+      --primary-light: #e0e7ff;
+      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      --accent-pink: #ec4899;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --cell-bg: #ffffff;
+      --cell-border: #e2e8f0;
+      --cell-active: #6366f1;
+      --cell-highlight: rgba(99, 102, 241, 0.12);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.08);
+      --shadow-lg: 0 20px 35px -5px rgba(99,102,241,0.18);
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --transition-bounce: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    [data-theme="dark"] {
+      --bg-gradient: linear-gradient(135deg, #090d16 0%, #15102a 50%, #0c1829 100%);
+      --card-bg: rgba(22, 30, 49, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.2);
+      --cell-bg: #1e293b;
+      --cell-border: rgba(255, 255, 255, 0.06);
+      --cell-active: #818cf8;
+      --cell-highlight: rgba(129, 140, 248, 0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--card-bg); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .brand-title {
+      font-size: 1.35rem; font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .icon-btn {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      color: var(--text-main); width: 40px; height: 40px; border-radius: var(--radius-full);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      font-size: 1.15rem; transition: var(--transition-bounce);
+    }
+    .icon-btn:hover { transform: scale(1.08); border-color: var(--primary); }
+    .nav-tabs {
+      max-width: 1100px; margin: 16px auto 0 auto; padding: 6px;
+      display: flex; gap: 8px; background: var(--card-bg); backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border); border-radius: var(--radius-full);
+      overflow-x: auto; box-shadow: var(--shadow-sm);
+    }
+    .nav-tab {
+      flex: 1; min-width: fit-content; padding: 10px 18px; border: none; background: transparent;
+      color: var(--text-muted); font-weight: 600; font-size: 0.92rem; border-radius: var(--radius-full);
+      cursor: pointer; display: flex; align-items: center; gap: 6px; transition: var(--transition-bounce);
+    }
+    .nav-tab.active { background: var(--primary-gradient); color: #fff; box-shadow: 0 4px 14px rgba(99,102,241,0.35); }
+    .main-content { max-width: 1150px; width: 100%; margin: 0 auto; padding: 20px 16px 40px 16px; flex: 1; }
+    .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+    .tab-pane.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Таблица */
+    .table-controls {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+      background: var(--card-bg); padding: 12px 20px; border-radius: var(--radius-md);
+      border: 1px solid var(--card-border); margin-bottom: 20px;
+    }
+    .chip-btn {
+      background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted);
+      padding: 6px 14px; font-size: 0.88rem; font-weight: 600; border-radius: var(--radius-full);
+      cursor: pointer; transition: var(--transition-bounce);
+    }
+    .chip-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .grid-and-info { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+    @media (max-width: 900px) { .grid-and-info { grid-template-columns: 1fr; } }
+    .table-card, .inspector-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-md);
+    }
+    .py-grid { display: grid; gap: 4px; user-select: none; }
+    .py-cell {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 0.92rem; font-weight: 700; border-radius: 8px;
+      background: var(--cell-bg); border: 1px solid var(--cell-border);
+      cursor: pointer; transition: var(--transition-bounce);
+    }
+    .py-cell.header-cell { background: var(--primary-gradient); color: #fff; }
+    .py-cell:not(.header-cell):hover { transform: scale(1.15); background: var(--cell-active); color: #fff; z-index: 5; }
+    .py-cell.active-cell { background: var(--accent-pink) !important; color: #fff !important; transform: scale(1.2); z-index: 10; }
+    .py-cell.highlight-axis { background: var(--cell-highlight); color: var(--primary); font-weight: 800; }
+    .py-cell.hidden-answer { color: transparent !important; }
+    .py-cell.hidden-answer::after { content: "?"; color: var(--text-muted); }
+    .py-cell.revealed-answer { color: inherit !important; }
+    .py-cell.revealed-answer::after { display: none; }
+
+    /* Инспектор */
+    .eq-banner {
+      background: var(--primary-gradient); color: #fff; padding: 14px;
+      border-radius: var(--radius-md); text-align: center; font-size: 2rem; font-weight: 900;
+      margin: 12px 0; box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+    }
+    .pronounce-box {
+      background: rgba(99, 102, 241, 0.08); border-left: 4px solid var(--primary);
+      padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 0.92rem; font-style: italic; margin-bottom: 12px;
+    }
+    .dot-grid { display: grid; gap: 4px; max-height: 160px; overflow: auto; padding: 8px; margin: 10px 0; }
+    .dot { width: 13px; height: 13px; border-radius: 50%; background: var(--primary); }
+
+    /* Уроки */
+    .num-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+    .num-pill {
+      min-width: 48px; height: 48px; border-radius: var(--radius-md); border: 2px solid var(--card-border);
+      background: var(--card-bg); color: var(--text-main); font-weight: 800; font-size: 1.15rem;
+      cursor: pointer; transition: var(--transition-bounce);
+    }
+    .num-pill.active { background: var(--primary-gradient); color: #fff; border-color: transparent; transform: scale(1.08); }
+    .lesson-hero {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+      padding: 24px; margin: 16px 0; display: flex; gap: 20px; align-items: center; box-shadow: var(--shadow-md);
+    }
+    .lesson-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .fact-card {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md);
+      padding: 16px; cursor: pointer; transition: var(--transition-bounce);
+    }
+    .fact-card:hover { transform: translateY(-3px); border-color: var(--primary); }
+
+    /* Тренажер и спринт */
+    .trainer-wrap { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+    .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+    .quiz-btn {
+      background: var(--cell-bg); border: 2px solid var(--cell-border); border-radius: var(--radius-md);
+      padding: 18px; font-size: 1.5rem; font-weight: 800; color: var(--text-main); cursor: pointer;
+      transition: var(--transition-bounce);
+    }
+    .quiz-btn:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .quiz-btn.correct { background: var(--accent-emerald) !important; color: #fff !important; }
+    .quiz-btn.wrong { background: var(--accent-rose) !important; color: #fff !important; }
+    .btn-main {
+      background: var(--primary-gradient); color: #fff; border: none; padding: 12px 24px;
+      font-size: 1rem; font-weight: 700; border-radius: var(--radius-full); cursor: pointer;
+      box-shadow: 0 4px 15px rgba(99,102,241,0.35); transition: var(--transition-bounce);
+    }
+    .btn-main:hover { transform: translateY(-2px); }
+
+    /* Нумпад */
+    .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 280px; margin: 0 auto; }
+    .num-k {
+      height: 48px; border-radius: 10px; border: 1px solid var(--cell-border); background: var(--cell-bg);
+      font-size: 1.3rem; font-weight: 700; cursor: pointer; color: var(--text-main);
+    }
+
+    /* Игра пары */
+    .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 600px; margin: 0 auto; }
+    .mem-card {
+      aspect-ratio: 1.1; border-radius: 12px; cursor: pointer; position: relative;
+      transform-style: preserve-3d; transition: transform 0.35s; box-shadow: var(--shadow-sm);
+    }
+    .mem-card.flipped { transform: rotateY(180deg); }
+    .mem-card.matched { transform: rotateY(180deg) scale(0.96); opacity: 0.7; }
+    .mem-face {
+      position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+      border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.3rem;
+    }
+    .mem-front { background: var(--primary-gradient); color: #fff; }
+    .mem-back { background: var(--cell-bg); border: 2px solid var(--primary); transform: rotateY(180deg); color: var(--text-main); }
+
+    /* Тепловая карта */
+    .heat-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+    .heat-cell {
+      aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; font-weight: 700; cursor: pointer; border: 1px solid var(--cell-border);
+    }
+    .h-0 { background: var(--cell-bg); opacity: 0.6; }
+    .h-1 { background: #fef08a; color: #854d0e; }
+    .h-2 { background: #fde047; color: #713f12; }
+    .h-3 { background: #86efac; color: #14532d; }
+    .h-err { background: #fca5a5; color: #7f1d1d; }
+
+    /* Модалка */
+    .modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s;
+    }
+    .modal.open { opacity: 1; pointer-events: auto; }
+    .modal-box {
+      background: var(--card-bg); border-radius: var(--radius-lg); padding: 32px; max-width: 440px;
+      width: 90%; text-align: center; border: 1px solid var(--card-border); box-shadow: var(--shadow-lg);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="brand" onclick="switchTab('table')">
+      <span style="font-size: 26px;">✖️</span>
+      <div>
+        <div class="brand-title">Умножайка PRO</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Интерактивный тренажёр таблицы умножения</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="icon-btn" id="sound-btn" title="Звук">🔊</button>
+      <button class="icon-btn" id="theme-btn" title="Тема">🌙</button>
+    </div>
+  </header>
+
+  <div style="padding: 0 16px;">
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="table">🧮 Таблица Пифагора</button>
+      <button class="nav-tab" data-tab="lessons">📖 Учи по числам</button>
+      <button class="nav-tab" data-tab="trainer">🎯 Тренажёр</button>
+      <button class="nav-tab" data-tab="sprint">⚡ Спринт 60с</button>
+      <button class="nav-tab" data-tab="memory">🧩 Найди пару</button>
+      <button class="nav-tab" data-tab="progress">🏆 Мой прогресс</button>
+    </nav>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- 1. ТАБЛИЦА -->
+    <section class="tab-pane active" id="tab-table">
+      <div class="table-controls">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="chip-btn active" data-filter="all">Вся таблица</button>
+          <button class="chip-btn" data-filter="squares">✨ Квадраты</button>
+          <button class="chip-btn" data-filter="evens">Чётные</button>
+          <button class="chip-btn" data-filter="hide">❓ Проверка памяти</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+          <span>Размер:</span>
+          <select id="table-size" style="padding: 6px 12px; border-radius: 8px; background: var(--cell-bg); color: var(--text-main); border: 1px solid var(--card-border);">
+            <option value="10">10 × 10</option>
+            <option value="12">12 × 12</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-and-info">
+        <div class="table-card" style="overflow-x: auto;">
+          <div class="py-grid" id="py-grid"></div>
+        </div>
+        <div class="inspector-card">
+          <div style="font-weight: 700; color: var(--primary); font-size: 0.85rem; text-transform: uppercase;">Инспектор примера</div>
+          <div class="eq-banner" id="insp-eq">7 × 8 = 56</div>
+          <div class="pronounce-box" id="insp-pron">🗣️ <em>«Семью восемь — пятьдесят шесть»</em></div>
+          <div style="background: var(--cell-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--cell-border); font-size: 0.88rem;" id="insp-add"></div>
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); margin-top: 14px;">Модель площади (точки):</div>
+          <div class="dot-grid" id="dot-grid"></div>
+          <button class="btn-main" style="width: 100%; margin-top: 10px;" id="train-cell-btn">🎯 Тренировать это число</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. УРОКИ -->
+    <section class="tab-pane" id="tab-lessons">
+      <div class="num-pills" id="lesson-pills"></div>
+      <div class="lesson-hero">
+        <div style="font-size: 3rem;" id="les-icon">🌈</div>
+        <div>
+          <h2 id="les-title" style="font-size: 1.6rem; font-weight: 800;">Умножение на 7</h2>
+          <div id="les-tag" style="color: var(--primary); font-weight: 700; margin-bottom: 6px;">Секретная семёрка</div>
+          <div id="les-secret" style="color: var(--text-muted); font-size: 0.95rem;"></div>
+        </div>
+      </div>
+      <div class="lesson-grid" id="les-grid"></div>
+    </section>
+
+    <!-- 3. ТРЕНАЖЕР -->
+    <section class="tab-pane" id="tab-trainer">
+      <div class="trainer-wrap">
+        <div class="table-card">
+          <div style="font-weight: 700; margin-bottom: 8px;">Выберите числа:</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="t-chips"></div>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button class="chip-btn" id="p-all">Все (2–10)</button>
+            <button class="chip-btn" id="p-hard">🔥 Сложные (6–9)</button>
+            <button class="chip-btn" id="p-easy">🌱 Простые (2,3,5)</button>
+          </div>
+        </div>
+        <div class="table-card" style="text-align: center; padding: 32px 20px;">
+          <div style="display: flex; justify-content: space-between; font-weight: 700;">
+            <span id="t-streak" style="color: #f97316;">🔥 0</span>
+            <span id="t-stats" style="color: var(--text-muted);">Верно: 0 / Ошибок: 0</span>
+          </div>
+          <div style="font-size: 3.2rem; font-weight: 900; margin: 24px 0;" id="t-question">7 × 8 = ?</div>
+          <div id="t-feedback" style="min-height: 24px; font-weight: 700; margin-bottom: 16px;"></div>
+          <div class="quiz-options" id="t-options"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. СПРИНТ -->
+    <section class="tab-pane" id="tab-sprint">
+      <div class="trainer-wrap" style="text-align: center;">
+        <div class="table-card" id="sp-intro" style="padding: 40px 20px;">
+          <div style="font-size: 3.5rem;">⏱️⚡</div>
+          <h2 style="font-size: 1.8rem; font-weight: 800; margin: 10px 0;">Спринт 60 секунд!</h2>
+          <p style="color: var(--text-muted); margin-bottom: 20px;">Сколько примеров ты решишь за минуту? За серию верных ответов очки утраиваются!</p>
+          <button class="btn-main" id="sp-start" style="font-size: 1.2rem; padding: 14px 36px;">🚀 Начать забег!</button>
+        </div>
+        <div class="table-card" id="sp-play" style="display: none; padding: 30px 20px;">
+          <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 12px;">
+            <span id="sp-time" style="color: var(--accent-rose);">⏱️ 60с</span>
+            <span id="sp-score" style="color: var(--primary);">Счёт: 0</span>
+          </div>
+          <div style="font-size: 3.2rem; font-weight: 900; margin: 20px 0;" id="sp-q">? × ? = ?</div>
+          <div class="quiz-options" id="sp-options"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. ПАРЫ -->
+    <section class="tab-pane" id="tab-memory">
+      <div style="max-width: 600px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700;" id="m-moves">Ходов: 0</span>
+        <span style="font-weight: 800; color: var(--primary);" id="m-time">Время: 0с</span>
+        <button class="chip-btn active" id="m-restart">🔄 Новая игра</button>
+      </div>
+      <div class="memory-grid" id="mem-grid"></div>
+    </section>
+
+    <!-- 6. ПРОГРЕСС -->
+    <section class="tab-pane" id="tab-progress">
+      <div class="table-card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h3 style="font-size: 1.2rem; font-weight: 800;">Карта памяти (100 примеров)</h3>
+          <button class="chip-btn" id="reset-btn" style="color: var(--accent-rose);">Сбросить прогресс</button>
+        </div>
+        <div class="heat-grid" id="heat-grid"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <div style="font-size: 3.5rem;" id="mod-icon">🎉</div>
+      <h3 style="font-size: 1.6rem; font-weight: 800; margin: 10px 0;" id="mod-title">Отлично!</h3>
+      <div id="mod-body" style="margin-bottom: 20px;"></div>
+      <button class="btn-main" onclick="document.getElementById('modal').classList.remove('open')">Продолжить</button>
+    </div>
+  </div>
+
+  <script>
+    // --- ЗВУКОВОЙ СИНТЕЗАТОР (Web Audio API) ---
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = localStorage.getItem('sound_on') !== 'false';
+      }
+      init() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      toggle() {
+        this.enabled = !this.enabled;
+        localStorage.setItem('sound_on', this.enabled);
+        if (this.enabled) { this.init(); this.playTone(520, 0.05); }
+        return this.enabled;
+      }
+      playTone(freq, dur = 0.1, type = 'sine') {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = type; osc.frequency.value = freq;
+        g.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+        osc.connect(g); g.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + dur);
+      }
+      playCorrect(streak = 0) {
+        if (!this.enabled) return;
+        this.init();
+        const base = 440 * Math.pow(2, Math.min(streak, 10) / 12);
+        [base, base * 1.25, base * 1.5].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 0.25), i * 40);
+        });
+      }
+      playWrong() {
+        this.playTone(220, 0.25, 'triangle');
+      }
+      playVictory() {
+        [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => this.playTone(f, 0.3), i * 100));
+      }
+    }
+    const sfx = new SoundFX();
+
+    // --- ДАННЫЕ И ЛАЙФХАКИ ---
+    const TIPS = {
+      1: { icon: "🪞", tag: "Зеркало", sec: "Любое число умножить на 1 — получится само число!" },
+      2: { icon: "👯", tag: "Удвоение", sec: "Сложи число с самим собой: 7 × 2 = 7 + 7 = 14. Ответ всегда чётный!" },
+      3: { icon: "☘️", tag: "Тройка", sec: "Сложи 3 раза, а сумма цифр любого ответа всегда делится на 3 (21 → 2+1=3)!" },
+      4: { icon: "🍀", tag: "Двойной дубль", sec: "Удвой число, а потом ещё раз удвой! Например: 7 → 14 → 28!" },
+      5: { icon: "🖐️", tag: "Часы и пальцы", sec: "Все ответы оканчиваются только на 0 (чётные) или 5 (нечётные)!" },
+      6: { icon: "🎲", tag: "Чётный фокус", sec: "При умножении на 2,4,6,8 ответ оканчивается на ту же цифру: 6×4=24, 6×8=48!" },
+      7: { icon: "🌈", tag: "5-6-7-8!", sec: "Запомни: 5, 6, 7, 8 → 56 = 7 × 8! А 7 × 7 = 49 (семью семь — сорок девять)!" },
+      8: { icon: "🐙", tag: "Три удвоения", sec: "Удвой трижды: 7 → 14 → 28 → 56!" },
+      9: { icon: "🪄", tag: "Магия девяток", sec: "Сумма цифр ответа ВСЕГДА = 9 (9×4=36, 3+6=9)! А первая цифра на 1 меньше множителя!" },
+      10: { icon: "🎯", tag: "Волшебный нолик", sec: "Просто припиши 0 в конце: 8 × 10 = 80!" }
+    };
+
+    const SPEECH = {
+      "2x2": "дважды два — четыре", "3x3": "трижды три — девять", "4x4": "четырежды четыре — шестнадцать",
+      "5x5": "пятью пять — двадцать пять", "6x6": "шестью шесть — тридцать шесть", "6x8": "шестью восемь — сорок восемь",
+      "7x7": "семью семь — сорок девять", "7x8": "семью восемь — пятьдесят шесть", "8x8": "восемью восемь — шестьдесят четыре",
+      "9x9": "девятью девять — восемьдесят один", "10x10": "десятью десять — сто"
+    };
+
+    function getPron(a, b) {
+      const k = `${Math.min(a,b)}x${Math.max(a,b)}`;
+      return SPEECH[k] || `${a} умножить на ${b} равно ${a*b}`;
+    }
+
+    // --- СОСТОЯНИЕ ---
+    const state = {
+      tab: 'table',
+      size: 10,
+      filter: 'all',
+      cell: { a: 7, b: 8 },
+      lesson: 7,
+      trainerSet: new Set([2,3,4,5,6,7,8,9]),
+      streak: 0,
+      stats: JSON.parse(localStorage.getItem('multi_stats_v3') || '{"facts":{}, "c":0, "w":0, "best":0}'),
+      sprint: { run: false, time: 60, score: 0, tid: null, streak: 0 },
+      memory: { deck: [], flipped: [], matched: 0, moves: 0, time: 0, tid: null, lock: false }
+    };
+
+    function saveStats() {
+      localStorage.setItem('multi_stats_v3', JSON.stringify(state.stats));
+    }
+
+    function recordFact(a, b, ok) {
+      const k = `${a}x${b}`, ak = `${b}x${a}`;
+      if (!state.stats.facts[k]) state.stats.facts[k] = { c: 0, w: 0 };
+      if (!state.stats.facts[ak]) state.stats.facts[ak] = { c: 0, w: 0 };
+      if (ok) { state.stats.c++; state.stats.facts[k].c++; state.stats.facts[ak].c++; }
+      else { state.stats.w++; state.stats.facts[k].w++; state.stats.facts[ak].w++; }
+      saveStats();
+    }
+
+    // --- НАВИГАЦИЯ ---
+    function switchTab(t) {
+      state.tab = t;
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${t}`));
+      sfx.playTone(480, 0.04);
+      if (t === 'table') renderTable();
+      if (t === 'lessons') renderLesson(state.lesson);
+      if (t === 'trainer') nextTrainer();
+      if (t === 'memory') startMemory();
+      if (t === 'progress') renderHeatmap();
+    }
+    document.querySelectorAll('.nav-tab').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+    // --- ТАБЛИЦА ПИФАГОРА ---
+    function renderTable() {
+      const g = document.getElementById('py-grid');
+      g.innerHTML = '';
+      const sz = state.size;
+      g.style.gridTemplateColumns = `repeat(${sz + 1}, minmax(0, 1fr))`;
+
+      for (let r = 0; r <= sz; r++) {
+        for (let c = 0; c <= sz; c++) {
+          const el = document.createElement('div');
+          el.className = 'py-cell';
+          if (r === 0 && c === 0) { el.textContent = '✖'; el.classList.add('header-cell'); }
+          else if (r === 0) { el.textContent = c; el.classList.add('header-cell'); }
+          else if (c === 0) { el.textContent = r; el.classList.add('header-cell'); }
+          else {
+            const v = r * c;
+            el.textContent = v;
+            el.dataset.r = r; el.dataset.c = c;
+            if (state.filter === 'squares' && r !== c) el.style.opacity = '0.2';
+            if (state.filter === 'evens' && v % 2 !== 0) el.style.opacity = '0.2';
+            if (state.filter === 'hide') el.classList.add('hidden-answer');
+            if (state.cell.a === r && state.cell.b === c) el.classList.add('active-cell');
+
+            el.onmouseenter = () => highlightAxes(r, c);
+            el.onmouseleave = () => highlightAxes(0, 0);
+            el.onclick = () => {
+              state.cell = { a: r, b: c };
+              el.classList.remove('hidden-answer');
+              el.classList.add('revealed-answer');
+              sfx.playTone(550, 0.05);
+              renderTable();
+            };
+          }
+          g.appendChild(el);
+        }
+      }
+      updateInspector();
+    }
+
+    function highlightAxes(r, c) {
+      document.querySelectorAll('.py-cell').forEach(el => {
+        const er = parseInt(el.dataset.r), ec = parseInt(el.dataset.c);
+        el.classList.toggle('highlight-axis', (er === r || ec === c) && r > 0);
+      });
+    }
+
+    function updateInspector() {
+      const { a, b } = state.cell;
+      const res = a * b;
+      document.getElementById('insp-eq').textContent = `${a} × ${b} = ${res}`;
+      document.getElementById('insp-pron').innerHTML = `🗣️ <em>«${getPron(a, b)}»</em>`;
+      document.getElementById('insp-add').innerHTML = `<b>Смысл:</b> ${Array(a).fill(b).join(' + ')} = <b>${res}</b> (${a} раз по ${b})`;
+
+      const dg = document.getElementById('dot-grid');
+      dg.innerHTML = '';
+      dg.style.gridTemplateColumns = `repeat(${b}, minmax(0, 1fr))`;
+      for (let i = 0; i < Math.min(res, 144); i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        dg.appendChild(d);
+      }
+    }
+
+    // --- УРОКИ ПО ЧИСЛАМ ---
+    function initLessons() {
+      const p = document.getElementById('lesson-pills');
+      p.innerHTML = '';
+      for (let i = 1; i <= 10; i++) {
+        const b = document.createElement('button');
+        b.className = `num-pill ${i === state.lesson ? 'active' : ''}`;
+        b.textContent = i;
+        b.onclick = () => { state.lesson = i; initLessons(); renderLesson(i); };
+        p.appendChild(b);
+      }
+    }
+
+    function renderLesson(n) {
+      const tip = TIPS[n] || { icon: '🔢', tag: `Таблица на ${n}`, sec: '' };
+      document.getElementById('les-icon').textContent = tip.icon;
+      document.getElementById('les-title').textContent = `Умножение на ${n}`;
+      document.getElementById('les-tag').textContent = tip.tag;
+      document.getElementById('les-secret').innerHTML = `💡 <b>Секрет:</b> ${tip.sec}`;
+
+      const g = document.getElementById('les-grid');
+      g.innerHTML = '';
+      for (let m = 1; m <= 10; m++) {
+        const card = document.createElement('div');
+        card.className = 'fact-card';
+        card.innerHTML = `
+          <div style="font-size: 1.4rem; font-weight: 800;">${n} × ${m} = <span style="color:var(--primary);">${n * m}</span></div>
+          <div style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">🗣️ ${getPron(n, m)}</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">${Array(m).fill(n).join('+')}</div>
+        `;
+        card.onclick = () => sfx.playTone(600, 0.05);
+        g.appendChild(card);
+      }
+    }
+
+    // --- ТРЕНАЖЁР ---
+    function initTrainer() {
+      const tc = document.getElementById('t-chips');
+      tc.innerHTML = '';
+      for (let i = 2; i <= 10; i++) {
+        const b = document.createElement('button');
+        b.className = `chip-btn ${state.trainerSet.has(i) ? 'active' : ''}`;
+        b.textContent = i;
+        b.onclick = () => {
+          if (state.trainerSet.has(i)) { if (state.trainerSet.size > 1) state.trainerSet.delete(i); }
+          else state.trainerSet.add(i);
+          initTrainer(); nextTrainer();
+        };
+        tc.appendChild(b);
+      }
+      document.getElementById('p-all').onclick = () => { state.trainerSet = new Set([2,3,4,5,6,7,8,9,10]); initTrainer(); nextTrainer(); };
+      document.getElementById('p-hard').onclick = () => { state.trainerSet = new Set([6,7,8,9]); initTrainer(); nextTrainer(); };
+      document.getElementById('p-easy').onclick = () => { state.trainerSet = new Set([2,3,5]); initTrainer(); nextTrainer(); };
+    }
+
+    let currQ = null;
+    function nextTrainer() {
+      const arr = Array.from(state.trainerSet);
+      const a = arr[Math.floor(Math.random() * arr.length)];
+      const b = Math.floor(Math.random() * 9) + 2;
+      const ans = a * b;
+
+      const opts = new Set([ans]);
+      while (opts.size < 4) opts.add(ans + (Math.floor(Math.random() * 7) - 3) * 2 || ans + 2);
+      const shuffled = Array.from(opts).sort(() => Math.random() - 0.5);
+
+      currQ = { a, b, ans };
+      document.getElementById('t-question').textContent = `${a} × ${b} = ?`;
+      document.getElementById('t-feedback').textContent = '';
+
+      const optBox = document.getElementById('t-options');
+      optBox.innerHTML = '';
+      shuffled.forEach(val => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-btn';
+        btn.textContent = val;
+        btn.onclick = () => checkTrainerAnswer(val, btn);
+        optBox.appendChild(btn);
+      });
+      document.getElementById('t-streak').textContent = `🔥 ${state.streak}`;
+      document.getElementById('t-stats').textContent = `Верно: ${state.stats.c} / Ошибок: ${state.stats.w}`;
+    }
+
+    function checkTrainerAnswer(val, btn) {
+      const ok = val === currQ.ans;
+      recordFact(currQ.a, currQ.b, ok);
+      const fb = document.getElementById('t-feedback');
+
+      if (ok) {
+        state.streak++;
+        btn.classList.add('correct');
+        sfx.playCorrect(state.streak);
+        fb.style.color = 'var(--accent-emerald)';
+        fb.textContent = `Отлично! ${currQ.a} × ${currQ.b} = ${currQ.ans} ✨`;
+        setTimeout(nextTrainer, 600);
+      } else {
+        state.streak = 0;
+        btn.classList.add('wrong');
+        sfx.playWrong();
+        fb.style.color = 'var(--accent-rose)';
+        fb.textContent = `Ошибка: ${currQ.a} × ${currQ.b} = ${currQ.ans} (${getPron(currQ.a, currQ.b)})`;
+        setTimeout(nextTrainer, 1400);
+      }
+    }
+
+    // --- СПРИНТ 60 СЕКУНД ---
+    document.getElementById('sp-start').onclick = () => {
+      document.getElementById('sp-intro').style.display = 'none';
+      document.getElementById('sp-play').style.display = 'block';
+      state.sprint.run = true;
+      state.sprint.time = 60;
+      state.sprint.score = 0;
+      state.sprint.streak = 0;
+      updateSprintHUD();
+      nextSprintQ();
+      if (state.sprint.tid) clearInterval(state.sprint.tid);
+      state.sprint.tid = setInterval(() => {
+        state.sprint.time--;
+        updateSprintHUD();
+        if (state.sprint.time <= 0) {
+          clearInterval(state.sprint.tid);
+          state.sprint.run = false;
+          sfx.playVictory();
+          document.getElementById('mod-title').textContent = '🏁 Время вышло!';
+          document.getElementById('mod-body').innerHTML = `Ты набрал <b>${state.sprint.score}</b> очков! Молодец!`;
+          document.getElementById('modal').classList.add('open');
+          document.getElementById('sp-intro').style.display = 'block';
+          document.getElementById('sp-play').style.display = 'none';
+        }
+      }, 1000);
+    };
+
+    function updateSprintHUD() {
+      document.getElementById('sp-time').textContent = `⏱️ ${state.sprint.time}с`;
+      document.getElementById('sp-score').textContent = `Счёт: ${state.sprint.score}`;
+    }
+
+    let spQ = null;
+    function nextSprintQ() {
+      const a = Math.floor(Math.random() * 8) + 2;
+      const b = Math.floor(Math.random() * 8) + 2;
+      const ans = a * b;
+      spQ = { a, b, ans };
+      document.getElementById('sp-q').textContent = `${a} × ${b} = ?`;
+
+      const opts = new Set([ans]);
+      while (opts.size < 4) opts.add(ans + (Math.floor(Math.random() * 7) - 3) * 2 || ans + 4);
+      const shuffled = Array.from(opts).sort(() => Math.random() - 0.5);
+
+      const box = document.getElementById('sp-options');
+      box.innerHTML = '';
+      shuffled.forEach(val => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-btn';
+        btn.textContent = val;
+        btn.onclick = () => {
+          if (!state.sprint.run) return;
+          if (val === spQ.ans) {
+            state.sprint.streak++;
+            state.sprint.score += state.sprint.streak > 5 ? 2 : 1;
+            sfx.playCorrect(state.sprint.streak);
+          } else {
+            state.sprint.streak = 0;
+            sfx.playWrong();
+          }
+          updateSprintHUD();
+          nextSprintQ();
+        };
+        box.appendChild(btn);
+      });
+    }
+
+    // --- НАЙДИ ПАРУ ---
+    function startMemory() {
+      clearInterval(state.memory.tid);
+      state.memory = { deck: [], flipped: [], matched: 0, moves: 0, time: 0, tid: null, lock: false };
+      document.getElementById('m-moves').textContent = `Ходов: 0`;
+      document.getElementById('m-time').textContent = `Время: 0с`;
+
+      state.memory.tid = setInterval(() => {
+        state.memory.time++;
+        document.getElementById('m-time').textContent = `Время: ${state.memory.time}с`;
+      }, 1000);
+
+      const pairs = [];
+      while (pairs.length < 6) {
+        const a = Math.floor(Math.random() * 8) + 2;
+        const b = Math.floor(Math.random() * 8) + 2;
+        if (!pairs.some(p => p.eq === `${a} × ${b}`)) {
+          pairs.push({ id: pairs.length, eq: `${a} × ${b}`, ans: `${a * b}` });
+        }
+      }
+
+      const deck = [];
+      pairs.forEach(p => {
+        deck.push({ id: p.id, text: p.eq, type: 'q' });
+        deck.push({ id: p.id, text: p.ans, type: 'a' });
+      });
+      deck.sort(() => Math.random() - 0.5);
+
+      const mg = document.getElementById('mem-grid');
+      mg.innerHTML = '';
+      deck.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'mem-card';
+        card.innerHTML = `<div class="mem-face mem-front">?</div><div class="mem-face mem-back">${c.text}</div>`;
+        card.onclick = () => {
+          if (state.memory.lock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+          sfx.playTone(620, 0.05);
+          card.classList.add('flipped');
+          state.memory.flipped.push({ card, data: c });
+
+          if (state.memory.flipped.length === 2) {
+            state.memory.moves++;
+            document.getElementById('m-moves').textContent = `Ходов: ${state.memory.moves}`;
+            state.memory.lock = true;
+            const [c1, c2] = state.memory.flipped;
+            if (c1.data.id === c2.data.id && c1.data.type !== c2.data.type) {
+              setTimeout(() => {
+                sfx.playCorrect();
+                c1.card.classList.add('matched'); c2.card.classList.add('matched');
+                state.memory.matched++;
+                state.memory.flipped = [];
+                state.memory.lock = false;
+                if (state.memory.matched === 6) {
+                  clearInterval(state.memory.tid);
+                  sfx.playVictory();
+                  document.getElementById('mod-title').textContent = '🧩 Победа в игре!';
+                  document.getElementById('mod-body').innerHTML = `Все пары найдены за <b>${state.memory.time}</b> секунд и ${state.memory.moves} ходов!`;
+                  document.getElementById('modal').classList.add('open');
+                }
+              }, 400);
+            } else {
+              setTimeout(() => {
+                sfx.playWrong();
+                c1.card.classList.remove('flipped'); c2.card.classList.remove('flipped');
+                state.memory.flipped = [];
+                state.memory.lock = false;
+              }, 800);
+            }
+          }
+        };
+        mg.appendChild(card);
+      });
+    }
+    document.getElementById('m-restart').onclick = startMemory;
+
+    // --- ТЕПЛОВАЯ КАРТА ПРОГРЕССА ---
+    function renderHeatmap() {
+      const hg = document.getElementById('heat-grid');
+      hg.innerHTML = '';
+      for (let r = 1; r <= 10; r++) {
+        for (let c = 1; c <= 10; c++) {
+          const el = document.createElement('div');
+          el.className = 'heat-cell';
+          el.textContent = r * c;
+          const f = state.stats.facts[`${r}x${c}`];
+          if (f) {
+            if (f.w > f.c && f.w > 0) el.classList.add('h-err');
+            else if (f.c >= 3) el.classList.add('h-3');
+            else if (f.c === 2) el.classList.add('h-2');
+            else if (f.c === 1) el.classList.add('h-1');
+            else el.classList.add('h-0');
+          } else {
+            el.classList.add('h-0');
+          }
+          el.onclick = () => {
+            state.cell = { a: r, b: c };
+            switchTab('table');
+          };
+          hg.appendChild(el);
+        }
+      }
+    }
+
+    document.getElementById('reset-btn').onclick = () => {
+      if (confirm('Сбросить весь прогресс?')) {
+        localStorage.removeItem('multi_stats_v3');
+        state.stats = { facts: {}, c: 0, w: 0, best: 0 };
+        renderHeatmap();
+      }
+    };
+
+    // --- КНОПКИ ШАПКИ ---
+    document.getElementById('sound-btn').onclick = () => {
+      const on = sfx.toggle();
+      document.getElementById('sound-btn').textContent = on ? '🔊' : '🔇';
+    };
+    document.getElementById('theme-btn').onclick = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      document.getElementById('theme-btn').textContent = isDark ? '🌙' : '☀️';
+    };
+    document.getElementById('table-size').onchange = (e) => {
+      state.size = parseInt(e.target.value);
+      renderTable();
+    };
+    document.querySelectorAll('.chip-btn[data-filter]').forEach(b => {
+      b.onclick = () => {
+        document.querySelectorAll('.chip-btn[data-filter]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        state.filter = b.dataset.filter;
+        renderTable();
+      };
+    });
+    document.getElementById('train-cell-btn').onclick = () => {
+      state.trainerSet = new Set([state.cell.a]);
+      initTrainer();
+      switchTab('trainer');
+    };
+
+    // СТАРТ
+    initLessons();
+    initTrainer();
+    renderTable();
+    renderLesson(state.lesson);
+  </script>
+</body>
+</html>
